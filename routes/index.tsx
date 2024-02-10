@@ -202,6 +202,56 @@ export default function () {
 							<span class='font-bold'>{formatSize(state.value.FRSH_STATE_SIZE)}</span>
 						</strong>
 
+						<div class='flex items-center gap-4 mb-4'>
+							<span
+								aria-label={`Ver o tamanho das props (FRSH_STATE) enviado pelo Fresh
+
+Clique na seta ou no tamanho ao lado pra ver o que tem dentro
+A barra fica vermelha se o tamanho for > 5kb
+Clique na barra pra copiar o json
+[0], [1], [2] ... significa que é um item do array`}
+								data-balloon-pos='up'
+								class='after:!whitespace-pre'
+							>
+								<Icon.QuestionMark
+									width={32}
+									height={32}
+								/>
+							</span>
+							<button
+								type='button'
+								// deno-lint-ignore fresh-server-event-handlers
+								onClick={(e) => {
+									for (
+										const i of e.currentTarget.parentElement?.nextElementSibling
+											?.querySelectorAll<
+												HTMLInputElement
+											>('input') ?? []
+									) {
+										i.checked = false
+									}
+								}}
+							>
+								<Icon.Collapse width={32} height={32} />
+							</button>
+							<button
+								type='button'
+								// deno-lint-ignore fresh-server-event-handlers
+								onClick={(e) => {
+									for (
+										const i of e.currentTarget.parentElement?.nextElementSibling
+											?.querySelectorAll<
+												HTMLInputElement
+											>('input') ?? []
+									) {
+										i.checked = true
+									}
+								}}
+							>
+								<Icon.Expand width={32} height={32} />
+							</button>
+						</div>
+
 						<ul class='flex flex-col gap-1'>
 							{indexJson(
 								JSON.parse(state.value.FRSH_STATE).v[0],

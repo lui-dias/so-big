@@ -9,6 +9,7 @@ type Index = {
 	name: string
 	size: number
 	percentage: number
+	data: string
 	children: Index[]
 }
 
@@ -41,19 +42,23 @@ function indexJson(json: Record<string, unknown>, totalSize: number) {
 	if (json === null) return r
 
 	for (const [key, value] of Object.entries(json)) {
+		const valueAsString = JSON.stringify(value)
+
 		if (typeof value === 'object') {
 			r.push({
 				name: /\d+/.test(key) ? `[${key}]` : key,
-				size: JSON.stringify(value).length,
-				percentage: JSON.stringify(value).length / totalSize,
+				size: valueAsString.length,
+				percentage: valueAsString.length / totalSize,
 				children: indexJson(value as Record<string, unknown>, totalSize),
+				data: valueAsString,
 			})
 		} else if (Array.isArray(value)) {
 			r.push({
 				name: /\d+/.test(key) ? `[${key}]` : key,
-				size: JSON.stringify(value).length,
-				percentage: JSON.stringify(value).length / totalSize,
+				size: valueAsString.length,
+				percentage: valueAsString.length / totalSize,
 				children: value.flatMap(indexJson),
+				data: valueAsString,
 			})
 		}
 	}
@@ -74,7 +79,7 @@ function ChevronRight(props: JSX.IntrinsicElements['svg']) {
 }
 
 function Row(
-	{ name, size, percentage, children, path }: Index & { path: string },
+	{ name, size, percentage, children, path, data }: Index & { path: string },
 ) {
 	const collapsable = useCollapsable()
 
@@ -94,11 +99,14 @@ function Row(
 					</span>
 				</collapsable.Trigger>
 				<div class='flex items-center w-full'>
-					<div
+					<button
+						type='button'
 						class={`h-10 rounded mx-1 ${size > 5000 ? 'bg-red-500' : 'bg-green-600'}`}
 						style={{ width: `${percentage * 100}%` }}
 						aria-label={path}
 						data-balloon-pos='right'
+						// deno-lint-ignore fresh-server-event-handlers
+						onClick={() => navigator.clipboard.writeText(data)}
 					/>
 
 					<span class='font-bold block mr-2'>{name}</span>

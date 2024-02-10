@@ -7,8 +7,6 @@ export const handler: Handlers<State> = {
 	async GET(req) {
 		const url = new URL(req.url).searchParams.get('url')
 
-		console.log(url)
-
 		if (!url) {
 			return new Response(JSON.stringify({ error: 'NO_URL' }))
 		}
@@ -47,8 +45,6 @@ export const handler: Handlers<State> = {
 				name,
 				stateSize: JSON.stringify(s).length,
 			}))
-
-		console.log(state)
 
 		return new Response(JSON.stringify(state))
 	},

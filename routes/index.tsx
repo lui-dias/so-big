@@ -87,7 +87,7 @@ function Row(
 				</collapsable.Trigger>
 				<div class='flex items-center w-full'>
 					<div
-						class='h-10 bg-red-500 rounded mx-1'
+						class={`h-10 rounded mx-1 ${size > 5000 ? 'bg-red-500' : 'bg-green-600'}`}
 						style={{ width: `${percentage * 100}%` }}
 						aria-label={path}
 						data-balloon-pos='right'
@@ -120,9 +120,9 @@ export type State = {
 		stateSize: number
 	}[]
 	imagesPreloads: {
+		src: string
 		width: number
 		height: number
-		src: string
 	}[]
 	error?: 'NO_FRESH' | 'FETCH_ERROR'
 }
@@ -254,6 +254,7 @@ export default function () {
 									<div class='masonry'>
 										{state.value.imagesPreloads.map((i) => (
 											<a
+												key={i.src}
 												class='masonry-item text-blue-500 hover:text-blue-700 relative'
 												href={i.src}
 												target='_blank'

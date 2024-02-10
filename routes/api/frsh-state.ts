@@ -50,7 +50,9 @@ export const handler: Handlers<State> = {
 			) as unknown as Element[],
 		].map(async (el) => {
 			const src = el.getAttribute('href') || ''
-			const r = await fetch(src)
+
+			const hasOrigin = !src.startsWith('/')
+			const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
 
 			const im = await imageDimensionsFromStream(
 				r.body as ReadableStream<Uint8Array>,
@@ -59,7 +61,7 @@ export const handler: Handlers<State> = {
 			if (!im) {
 				return {
 					id: nanoid(),
-					src,
+					src: hasOrigin ? src : url.replace(/\/$/, '') + src,
 					width: 0,
 					height: 0,
 				}
@@ -69,7 +71,7 @@ export const handler: Handlers<State> = {
 
 			return {
 				id: nanoid(),
-				src,
+				src: hasOrigin ? src : url.replace(/\/$/, '') + src,
 				width,
 				height,
 			}
@@ -80,9 +82,11 @@ export const handler: Handlers<State> = {
 				'img',
 			) as unknown as Element[],
 		].map(async (el) => {
-			const src = el.getAttribute('src') || ''
 			const lazy = el.getAttribute('loading') === 'lazy'
-			const r = await fetch(src)
+			const src = el.getAttribute('src') || ''
+
+			const hasOrigin = !src.startsWith('/')
+			const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
 
 			const im = await imageDimensionsFromStream(
 				r.body as ReadableStream<Uint8Array>,
@@ -91,7 +95,7 @@ export const handler: Handlers<State> = {
 			if (!im) {
 				return {
 					id: nanoid(),
-					src,
+					src: hasOrigin ? src : url.replace(/\/$/, '') + src,
 					width: 0,
 					height: 0,
 					lazy,
@@ -102,7 +106,7 @@ export const handler: Handlers<State> = {
 
 			return {
 				id: nanoid(),
-				src,
+				src: hasOrigin ? src : url.replace(/\/$/, '') + src,
 				width,
 				height,
 				lazy,

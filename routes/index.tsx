@@ -1,6 +1,5 @@
 import { useSignal } from '@preact/signals'
 import type { JSX } from 'preact'
-import { useId } from 'preact/hooks'
 import useCollapsable from '../components/useCollapsable.tsx'
 import formatSize from '../sdk/formatSize.ts'
 import Icon from '../components/Icon.tsx'
@@ -152,6 +151,7 @@ function Form(
 				name='url'
 				required
 				class='w-full px-3 py-2 outline-0'
+				placeholder='https://storefront.deco.site'
 				autofocus
 			/>
 			<button type='submit' class='h-11 w-20 flex justify-center items-center'>

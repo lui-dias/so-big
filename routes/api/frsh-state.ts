@@ -11,8 +11,20 @@ export const handler: Handlers<State> = {
 			return new Response(JSON.stringify({ error: 'NO_URL' }))
 		}
 
+		const r = await fetch(url).then((r) => r.text()).catch((e) => {
+			if (e instanceof TypeError) {
+				return new Response(JSON.stringify({ error: 'FETCH_ERROR' }))
+			}
+
+			return e
+		})
+
+		if (r instanceof Response) {
+			return r
+		}
+
 		const dom = new DOMParser().parseFromString(
-			await fetch(url).then((r) => r.text()),
+			r,
 			'text/html',
 		)
 

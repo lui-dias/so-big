@@ -7,7 +7,7 @@ import * as $_app from './routes/_app.tsx'
 import * as $_middleware from './routes/_middleware.ts'
 import * as $api_frsh_state from './routes/api/frsh-state.ts'
 import * as $index from './routes/index.tsx'
-
+import * as $Index from './islands/Index.tsx'
 import { type Manifest } from '$fresh/server.ts'
 
 const manifest = {
@@ -18,7 +18,9 @@ const manifest = {
 		'./routes/api/frsh-state.ts': $api_frsh_state,
 		'./routes/index.tsx': $index,
 	},
-	islands: {},
+	islands: {
+		'./islands/Index.tsx': $Index,
+	},
 	baseUrl: import.meta.url,
 } satisfies Manifest
 

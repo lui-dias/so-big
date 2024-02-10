@@ -1,23 +1,38 @@
-'island'
-
-import { effect, useSignal } from '@preact/signals'
+import { useSignal } from '@preact/signals'
 import type { JSX } from 'preact'
 import { useId } from 'preact/hooks'
 import useCollapsable from '../components/useCollapsable.tsx'
-import waitAppear from '../sdk/waitAppear.ts'
-
-function formatSize(bytes: number) {
-	if (bytes < 1024) return `${bytes} B`
-	if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(2)} KB`
-
-	return `${(bytes / 1024 ** 2).toFixed(2)} MB`
-}
+import formatSize from '../sdk/formatSize.ts'
+import Icon from '../components/Icon.tsx'
 
 type Index = {
 	name: string
 	size: number
 	percentage: number
 	children: Index[]
+}
+
+export type State = {
+	FRSH_STATE: string
+	FRSH_STATE_SIZE: number
+	sections: {
+		name: string
+		stateSize: number
+	}[]
+	imagesPreloads: {
+		id: string
+		src: string
+		width: number
+		height: number
+	}[]
+	imagesLazy: {
+		id: string
+		src: string
+		width: number
+		height: number
+		lazy: boolean
+	}[]
+	error?: 'NO_FRESH' | 'FETCH_ERROR'
 }
 
 function indexJson(json: Record<string, unknown>, totalSize: number) {
@@ -61,19 +76,12 @@ function ChevronRight(props: JSX.IntrinsicElements['svg']) {
 function Row(
 	{ name, size, percentage, children, path }: Index & { path: string },
 ) {
-	const id = useId()
 	const collapsable = useCollapsable()
 
 	return (
-		<collapsable.Collapsable
-			id={id}
-			class='flex flex-col gap-1 [&:has(>input:checked)>div>label>svg]:rotate-90'
-		>
+		<collapsable.Collapsable class='flex flex-col gap-1 [&:has(>input:checked)>div>label>svg]:rotate-90'>
 			<div class='flex items-center'>
-				<collapsable.Trigger
-					for={id}
-					class='h-full flex justify-center items-center'
-				>
+				<collapsable.Trigger class='h-full flex justify-center items-center'>
 					{children.length > 0 && (
 						<ChevronRight width={24} height={24} class='transition-transform' />
 					)}
@@ -112,21 +120,6 @@ function Row(
 	)
 }
 
-export type State = {
-	FRSH_STATE: string
-	FRSH_STATE_SIZE: number
-	sections: {
-		name: string
-		stateSize: number
-	}[]
-	imagesPreloads: {
-		src: string
-		width: number
-		height: number
-	}[]
-	error?: 'NO_FRESH' | 'FETCH_ERROR'
-}
-
 function Form(
 	{ handleSubmit }: { handleSubmit: (s: string) => Promise<void> },
 ) {
@@ -155,43 +148,8 @@ function Form(
 			/>
 			<button type='submit' class='h-11 w-20 flex justify-center items-center'>
 				{loading.value
-					? (
-						<svg
-							xmlns='http://www.w3.org/2000/svg'
-							width='32'
-							height='32'
-							viewBox='0 0 24 24'
-							class='animate-spin'
-						>
-							<title>Loading</title>
-							<g fill='none' fill-rule='evenodd'>
-								<path d='M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035c-.01-.004-.019-.001-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427c-.002-.01-.009-.017-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093c.012.004.023 0 .029-.008l.004-.014l-.034-.614c-.003-.012-.01-.02-.02-.022m-.715.002a.023.023 0 0 0-.027.006l-.006.014l-.034.614c0 .012.007.02.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z' />
-								<path
-									fill='currentColor'
-									d='M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15M1.5 12C1.5 6.201 6.201 1.5 12 1.5S22.5 6.201 22.5 12S17.799 22.5 12 22.5S1.5 17.799 1.5 12'
-									opacity='.1'
-								/>
-								<path
-									fill='currentColor'
-									d='M12 4.5a7.458 7.458 0 0 0-5.187 2.083a1.5 1.5 0 0 1-2.075-2.166A10.458 10.458 0 0 1 12 1.5a1.5 1.5 0 0 1 0 3'
-								/>
-							</g>
-						</svg>
-					)
-					: (
-						<svg
-							xmlns='http://www.w3.org/2000/svg'
-							width='32'
-							height='32'
-							viewBox='0 0 24 24'
-						>
-							<title>Weight</title>
-							<path
-								fill='currentColor'
-								d='M12 3a4 4 0 0 1 4 4c0 .73-.19 1.41-.54 2H18c.95 0 1.75.67 1.95 1.56C21.96 18.57 22 18.78 22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2c0-.22.04-.43 2.05-8.44C4.25 9.67 5.05 9 6 9h2.54A3.89 3.89 0 0 1 8 7a4 4 0 0 1 4-4m0 2a2 2 0 0 0-2 2a2 2 0 0 0 2 2a2 2 0 0 0 2-2a2 2 0 0 0-2-2m-6 6v8h2v-2.5l1 1V19h2v-2l-2-2l2-2v-2H9v1.5l-1 1V11zm9 0c-1.11 0-2 .89-2 2v4c0 1.11.89 2 2 2h3v-5h-2v3h-1v-4h3v-2z'
-							/>
-						</svg>
-					)}
+					? <Icon.Loading width={32} height={32} class='animate-spin' />
+					: <Icon.Weight width={32} height={32} />}
 			</button>
 		</form>
 	)
@@ -199,6 +157,9 @@ function Form(
 
 export default function () {
 	const state = useSignal({} as State)
+
+	const preloadCollapsable = useCollapsable()
+	const lazyCollapsable = useCollapsable()
 
 	async function handleSubmit(url: string) {
 		state.value = await fetch(`/api/frsh-state?url=${encodeURIComponent(url)}`)
@@ -222,56 +183,12 @@ export default function () {
 		)
 	}
 
-	effect(async () => {
-		if (state.value.imagesPreloads?.length > 0) {
-			await waitAppear('.masonry')
-
-			// @ts-expect-error External dependency
-			Macy({
-				container: '.masonry',
-				waitForImages: false,
-				columns: 2,
-				margin: 4,
-			})
-		}
-	})
-
 	return (
 		<>
 			<Form handleSubmit={handleSubmit} />
 			{Object.keys(state.value).length > 0 && (
 				<div class='w-full mx-auto mt-12 max-w-5xl flex flex-col gap-20'>
 					<div>
-						{state.value.imagesPreloads.length === 0
-							? (
-								<span class='text-red-500 text-lg'>
-									Nenhum imagem tem preload
-								</span>
-							)
-							: (
-								<>
-									<strong class='text-4xl block mb-4'>Preload:</strong>
-									<div class='masonry'>
-										{state.value.imagesPreloads.map((i) => (
-											<a
-												key={i.src}
-												class='masonry-item text-blue-500 hover:text-blue-700 relative'
-												href={i.src}
-												target='_blank'
-												rel='noopener noreferrer'
-											>
-												<img src={i.src} alt='' />
-												<span class='absolute bottom-0 right-0 px-2 py-1 bg-black rounded-tl text-white font-medium'>
-													{i.width}x{i.height}
-												</span>
-											</a>
-										))}
-									</div>
-								</>
-							)}
-					</div>
-
-					<div class='mb-10'>
 						<strong class='text-4xl block mb-10'>
 							<span class='text-gray-500'>TOTAL:</span>{' '}
 							<span class='font-bold'>{formatSize(state.value.FRSH_STATE_SIZE)}</span>
@@ -285,6 +202,122 @@ export default function () {
 								.map((i, ii) => <Row {...i} path={`[${ii}]`} />)}
 						</ul>
 					</div>
+
+					{state.value.imagesPreloads.length === 0
+						? (
+							<span class='text-red-500 text-lg'>
+								Nenhuma imagem tem preload
+							</span>
+						)
+						: (
+							<preloadCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
+								<preloadCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
+									<ChevronRight
+										width={32}
+										height={32}
+										class='transition-transform'
+									/>
+									<span>
+										Preload:{' '}
+										<span class='font-bold'>
+											{state.value.imagesPreloads.length}
+										</span>
+									</span>
+								</preloadCollapsable.Trigger>
+								<preloadCollapsable.ContentWrapper>
+									<preloadCollapsable.Content class='flex flex-wrap bg-gray-100'>
+										{state.value.imagesPreloads.map((i) => {
+											const isSmall = i.width < Math.min(innerWidth, 1024)
+
+											return (
+												<>
+													{i.width > 0 && i.height > 0 && (
+														<a
+															key={i.id}
+															class='text-blue-500 hover:text-blue-700 relative h-[200px] p-1 flex-grow flex justify-center items-center group border-y-2 first:border-t-0 last:border-b-0 border-y-gray-200'
+															href={i.src}
+															target='_blank'
+															rel='noopener noreferrer'
+														>
+															<img
+																src={i.src}
+																alt=''
+																class={`object-cover rounded max-h-full ${
+																	isSmall ? '' : 'min-w-full'
+																}`}
+															/>
+
+															<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
+																Preload - {i.width}x{i.height}
+															</span>
+														</a>
+													)}
+												</>
+											)
+										})}
+									</preloadCollapsable.Content>
+								</preloadCollapsable.ContentWrapper>
+							</preloadCollapsable.Collapsable>
+						)}
+
+					{state.value.imagesLazy.length === 0
+						? (
+							<span class='text-red-500 text-lg'>
+								Nenhuma imagem é lazy
+							</span>
+						)
+						: (
+							<lazyCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
+								<lazyCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
+									<ChevronRight
+										width={32}
+										height={32}
+										class='transition-transform'
+									/>
+									<span>
+										Lazy:{' '}
+										<span class='font-bold'>
+											{state.value.imagesLazy.length}
+										</span>
+									</span>
+								</lazyCollapsable.Trigger>
+								<lazyCollapsable.ContentWrapper>
+									<lazyCollapsable.Content class='flex flex-wrap bg-gray-100'>
+										{state.value.imagesLazy.map((i) => {
+											const isSmall = i.width < Math.min(innerWidth, 1024)
+
+											return (
+												<>
+													{i.width > 0 && i.height > 0 && (
+														<a
+															key={i.id}
+															class='text-blue-500 hover:text-blue-700 relative h-[200px] p-1 flex-grow flex justify-center items-center group border-y-2 first:border-t-0 last:border-b-0 border-y-gray-200'
+															href={i.src}
+															target='_blank'
+															rel='noopener noreferrer'
+														>
+															<img
+																src={i.src}
+																alt=''
+																class={`object-cover rounded max-h-full ${
+																	isSmall ? '' : 'min-w-full'
+																}`}
+															/>
+
+															<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
+																Lazy - {i.width}x{i.height}
+															</span>
+														</a>
+													)}
+												</>
+											)
+										})}
+									</lazyCollapsable.Content>
+								</lazyCollapsable.ContentWrapper>
+							</lazyCollapsable.Collapsable>
+						)}
+
+					<div class='w-full h-10' />
 				</div>
 			)}
 		</>

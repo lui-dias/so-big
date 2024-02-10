@@ -3,6 +3,7 @@ import { Handlers } from '$fresh/server.ts'
 import { State } from '../index.tsx'
 import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts'
 import { imageDimensionsFromStream } from 'npm:image-dimensions'
+import { nanoid } from 'npm:nanoid'
 
 export const handler: Handlers<State> = {
 	async GET(req) {
@@ -55,14 +56,56 @@ export const handler: Handlers<State> = {
 				r.body as ReadableStream<Uint8Array>,
 			)
 
-			if (!im) throw new Error('no image')
+			if (!im) {
+				return {
+					id: nanoid(),
+					src,
+					width: 0,
+					height: 0,
+				}
+			}
 
 			const { width, height } = im
 
 			return {
+				id: nanoid(),
 				src,
 				width,
 				height,
+			}
+		}))
+
+		state.imagesLazy = await Promise.all([
+			...dom.querySelectorAll(
+				'img',
+			) as unknown as Element[],
+		].map(async (el) => {
+			const src = el.getAttribute('src') || ''
+			const lazy = el.getAttribute('loading') === 'lazy'
+			const r = await fetch(src)
+
+			const im = await imageDimensionsFromStream(
+				r.body as ReadableStream<Uint8Array>,
+			)
+
+			if (!im) {
+				return {
+					id: nanoid(),
+					src,
+					width: 0,
+					height: 0,
+					lazy,
+				}
+			}
+
+			const { width, height } = im
+
+			return {
+				id: nanoid(),
+				src,
+				width,
+				height,
+				lazy,
 			}
 		}))
 

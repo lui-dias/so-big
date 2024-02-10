@@ -2,6 +2,7 @@ import { zip } from '$std/collections/zip.ts'
 import { Handlers } from '$fresh/server.ts'
 import { State } from '../index.tsx'
 import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts'
+import { imageDimensionsFromStream } from 'npm:image-dimensions'
 
 export const handler: Handlers<State> = {
 	async GET(req) {
@@ -41,6 +42,29 @@ export const handler: Handlers<State> = {
 		}
 
 		state.FRSH_STATE_SIZE = JSON.stringify(state.FRSH_STATE).length
+
+		state.imagesPreloads = await Promise.all([
+			...dom.querySelectorAll(
+				'link[rel=preload][as=image]',
+			) as unknown as Element[],
+		].map(async (el) => {
+			const src = el.getAttribute('href') || ''
+			const r = await fetch(src)
+
+			const im = await imageDimensionsFromStream(
+				r.body as ReadableStream<Uint8Array>,
+			)
+
+			if (!im) throw new Error('no image')
+
+			const { width, height } = im
+
+			return {
+				src,
+				width,
+				height,
+			}
+		}))
 
 		const sections = [
 			...(dom.querySelectorAll(

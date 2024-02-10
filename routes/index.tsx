@@ -1,9 +1,10 @@
 'island'
 
-import { useSignal } from '@preact/signals'
+import { effect, useSignal } from '@preact/signals'
 import type { JSX } from 'preact'
 import { useId } from 'preact/hooks'
 import useCollapsable from '../components/useCollapsable.tsx'
+import waitAppear from '../sdk/waitAppear.ts'
 
 function formatSize(bytes: number) {
 	if (bytes < 1024) return `${bytes} B`
@@ -21,6 +22,8 @@ type Index = {
 
 function indexJson(json: Record<string, unknown>, totalSize: number) {
 	const r = [] as Index[]
+
+	if (json === null) return r
 
 	for (const [key, value] of Object.entries(json)) {
 		if (typeof value === 'object') {
@@ -115,6 +118,11 @@ export type State = {
 	sections: {
 		name: string
 		stateSize: number
+	}[]
+	imagesPreloads: {
+		width: number
+		height: number
+		src: string
 	}[]
 	error?: 'NO_FRESH' | 'FETCH_ERROR'
 }
@@ -214,25 +222,68 @@ export default function () {
 		)
 	}
 
+	effect(async () => {
+		if (state.value.imagesPreloads?.length > 0) {
+			await waitAppear('.masonry')
+
+			// @ts-expect-error External dependency
+			Macy({
+				container: '.masonry',
+				waitForImages: false,
+				columns: 2,
+				margin: 4,
+			})
+		}
+	})
+
 	return (
 		<>
 			<Form handleSubmit={handleSubmit} />
 			{Object.keys(state.value).length > 0 && (
-				<div class='w-full mx-auto mt-12 max-w-5xl'>
-					<div class='ml-4 mb-10 flex flex-col gap-2'>
-						<strong class='text-4xl'>
+				<div class='w-full mx-auto mt-12 max-w-5xl flex flex-col gap-20'>
+					<div>
+						{state.value.imagesPreloads.length === 0
+							? (
+								<span class='text-red-500 text-lg'>
+									Nenhum imagem tem preload
+								</span>
+							)
+							: (
+								<>
+									<strong class='text-4xl block mb-4'>Preload:</strong>
+									<div class='masonry'>
+										{state.value.imagesPreloads.map((i) => (
+											<a
+												class='masonry-item text-blue-500 hover:text-blue-700 relative'
+												href={i.src}
+												target='_blank'
+												rel='noopener noreferrer'
+											>
+												<img src={i.src} alt='' />
+												<span class='absolute bottom-0 right-0 px-2 py-1 bg-black rounded-tl text-white font-medium'>
+													{i.width}x{i.height}
+												</span>
+											</a>
+										))}
+									</div>
+								</>
+							)}
+					</div>
+
+					<div class='mb-10'>
+						<strong class='text-4xl block mb-10'>
 							<span class='text-gray-500'>TOTAL:</span>{' '}
 							<span class='font-bold'>{formatSize(state.value.FRSH_STATE_SIZE)}</span>
 						</strong>
-					</div>
 
-					<ul class='flex flex-col gap-1'>
-						{indexJson(
-							JSON.parse(state.value.FRSH_STATE).v[0],
-							state.value.FRSH_STATE_SIZE,
-						)
-							.map((i, ii) => <Row {...i} path={`[${ii}]`} />)}
-					</ul>
+						<ul class='flex flex-col gap-1'>
+							{indexJson(
+								JSON.parse(state.value.FRSH_STATE).v[0],
+								state.value.FRSH_STATE_SIZE,
+							)
+								.map((i, ii) => <Row {...i} path={`[${ii}]`} />)}
+						</ul>
+					</div>
 				</div>
 			)}
 		</>

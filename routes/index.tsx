@@ -1,16 +1,9 @@
 import { useSignal } from '@preact/signals'
-import type { JSX } from 'preact'
 import useCollapsable from '../components/useCollapsable.tsx'
 import formatSize from '../sdk/formatSize.ts'
 import Icon from '../components/Icon.tsx'
-
-type Index = {
-	name: string
-	size: number
-	percentage: number
-	data: string
-	children: Index[]
-}
+import clx from '../sdk/clx.ts'
+import indexJson, { Index } from '../sdk/indexJson.ts'
 
 export type State = {
 	FRSH_STATE: string
@@ -32,48 +25,6 @@ export type State = {
 	error?: 'NO_FRESH' | 'FETCH_ERROR'
 }
 
-function indexJson(json: Record<string, unknown>, totalSize: number) {
-	const r = [] as Index[]
-
-	if (json === null) return r
-
-	for (const [key, value] of Object.entries(json)) {
-		const valueAsString = JSON.stringify(value)
-
-		if (typeof value === 'object') {
-			r.push({
-				name: /\d+/.test(key) ? `[${key}]` : key,
-				size: valueAsString.length,
-				percentage: valueAsString.length / totalSize,
-				children: indexJson(value as Record<string, unknown>, totalSize),
-				data: valueAsString,
-			})
-		} else if (Array.isArray(value)) {
-			r.push({
-				name: /\d+/.test(key) ? `[${key}]` : key,
-				size: valueAsString.length,
-				percentage: valueAsString.length / totalSize,
-				children: value.flatMap(indexJson),
-				data: valueAsString,
-			})
-		}
-	}
-
-	return r
-}
-
-function ChevronRight(props: JSX.IntrinsicElements['svg']) {
-	return (
-		<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' {...props}>
-			<title>Chevron Right</title>
-			<path
-				fill='currentColor'
-				d='M10 6L8.59 7.41L13.17 12l-4.58 4.59L10 18l6-6z'
-			/>
-		</svg>
-	)
-}
-
 function Row(
 	{ name, size, percentage, children, path, data }: Index & { path: string },
 ) {
@@ -84,16 +35,17 @@ function Row(
 			<div class='flex items-center'>
 				<collapsable.Trigger class='h-full flex justify-center items-center'>
 					{children.length > 0 && (
-						<ChevronRight
+						<Icon.ChevronRight
 							width={24}
 							height={24}
 							class='transition-transform text-slate-500'
 						/>
 					)}
 					<span
-						class={`bg-neutral-800 px-2 min-w-[96px] h-10 flex justify-center items-center text-slate-400 ${
-							children.length > 0 ? '' : 'ml-6'
-						}`}
+						class={clx(
+							'bg-neutral-800 px-2 min-w-[96px] h-10 flex justify-center items-center text-slate-400',
+							children.length > 0 && 'ml-6',
+						)}
 					>
 						{formatSize(size)}
 					</span>
@@ -101,9 +53,10 @@ function Row(
 				<div class='flex items-center w-full h-10'>
 					<button
 						type='button'
-						class={`rounded-tr-sm h-10 rounded-br-sm mx-1 ${
-							size > 5000 ? 'bg-red-700' : 'bg-green-700'
-						}`}
+						class={clx(
+							'rounded-tr-sm h-10 rounded-br-sm mx-1',
+							size > 5000 ? 'bg-red-700' : 'bg-green-700',
+						)}
 						style={{ width: `${percentage * 100}%` }}
 						aria-label={path}
 						data-balloon-pos='right'
@@ -347,7 +300,7 @@ Clique na barra pra copiar o json
 								</div>
 								<imagesCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
 									<imagesCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
-										<ChevronRight
+										<Icon.ChevronRight
 											width={32}
 											height={32}
 											class='transition-transform text-slate-500'
@@ -374,12 +327,18 @@ Clique na barra pra copiar o json
 																<img
 																	src={i.src}
 																	alt=''
-																	class={`object-cover rounded max-h-full ${
-																		isSmall ? '' : 'min-w-full'
-																	}`}
+																	class={clx(
+																		'object-cover rounded max-h-full',
+																		!isSmall && 'min-w-full',
+																	)}
 																/>
 
-																<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
+																<span
+																	class={clx(
+																		'absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0',
+																		isSmall && 'text-sm',
+																	)}
+																>
 																	{i.width}x{i.height}
 																</span>
 															</a>

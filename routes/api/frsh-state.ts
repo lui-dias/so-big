@@ -25,17 +25,18 @@ export const handler: Handlers<State> = {
 			return r
 		}
 
-		const dom = new DOMParser().parseFromString(
-			r,
-			'text/html',
-		)
-
+		const dom = new DOMParser().parseFromString(r, 'text/html')
 		if (!dom) throw new Error('no dom')
+
+		function querySelectorAll(selectors: string) {
+			if (!dom) throw new Error('no dom')
+
+			return [...dom.querySelectorAll(selectors)] as unknown as Element[]
+		}
 
 		const state = {} as State
 
 		state.FRSH_STATE = dom.querySelector('script[id^="__FRSH_STATE"]')?.textContent ?? ''
-
 		if (!state.FRSH_STATE) {
 			state.error = 'NO_FRESH'
 
@@ -44,11 +45,7 @@ export const handler: Handlers<State> = {
 
 		state.FRSH_STATE_SIZE = JSON.stringify(state.FRSH_STATE).length
 
-		const imagesPreloads = [
-			...dom.querySelectorAll(
-				'link[rel=preload][as=image]',
-			) as unknown as Element[],
-		].map((el) => {
+		const imagesPreloads = querySelectorAll('link[rel=preload][as=image]').map((el) => {
 			let src = el.getAttribute('href') || ''
 
 			if (src.includes('image.ts')) {
@@ -64,59 +61,52 @@ export const handler: Handlers<State> = {
 			return { src, fetchPriorityHigh }
 		})
 
-		state.images = await Promise.all([
-			...dom.querySelectorAll(
-				'img',
-			) as unknown as Element[],
-			...dom.querySelectorAll(
-				'picture > source',
-			) as unknown as Element[],
-		].map(async (el) => {
-			const lazy = el.getAttribute('loading') === 'lazy'
-			let src = el.getAttribute('src') || el.getAttribute('srcset')?.split(' ').at(-2) || ''
+		state.images = await Promise.all(
+			[...querySelectorAll('img'), ...querySelectorAll('picture > source')].map(
+				async (el) => {
+					const lazy = el.getAttribute('loading') === 'lazy'
+					let src = el.getAttribute('src') ||
+						el.getAttribute('srcset')?.split(' ').at(-2) || ''
 
-			if (src.includes('image.ts')) {
-				const normalUrl = new URL(`http://localhost:8000${src}`).searchParams.get('src')
+					if (src.includes('image.ts')) {
+						const normalUrl = new URL(`http://localhost:8000${src}`).searchParams.get(
+							'src',
+						)
 
-				if (!normalUrl) throw new Error('no normal url')
+						if (!normalUrl) throw new Error('no normal url')
 
-				src = normalUrl
-			}
+						src = normalUrl
+					}
 
-			const preload = imagesPreloads.some((i) => i.src === src)
-			const fetchPriorityHigh = imagesPreloads.some((i) =>
-				i.src === src && i.fetchPriorityHigh
-			)
+					const preload = imagesPreloads.find((i) => i.src === src)
 
-			const hasOrigin = !src.startsWith('/')
-			const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
+					const hasOrigin = !src.startsWith('/')
+					const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
 
-			const im = await imageDimensionsFromStream(
-				r.body as ReadableStream<Uint8Array>,
-			)
+					if (!r.body) throw new Error('no body')
 
-			const { width, height } = im ?? {
-				width: 0,
-				height: 0,
-			}
+					const im = await imageDimensionsFromStream(r.body)
 
-			return {
-				id: nanoid(),
-				src: hasOrigin ? src : url.replace(/\/$/, '') + src,
-				width,
-				height,
-				lazy,
-				type: el.tagName === 'SOURCE' ? 'picture' : 'img',
-				preload,
-				fetchPriorityHigh,
-			}
-		}))
+					const { width, height } = im ?? {
+						width: 0,
+						height: 0,
+					}
 
-		const sections = [
-			...(dom.querySelectorAll(
-				'section[data-manifest-key]',
-			) as unknown as Element[]),
-		].map(
+					return {
+						id: nanoid(),
+						src: hasOrigin ? src : url.replace(/\/$/, '') + src,
+						width,
+						height,
+						lazy,
+						type: el.tagName === 'SOURCE' ? 'picture' : 'img',
+						preload: !!preload,
+						fetchPriorityHigh: !!preload?.fetchPriorityHigh,
+					}
+				},
+			),
+		)
+
+		const sections = querySelectorAll('section[data-manifest-key]').map(
 			(el) => el.getAttribute('data-manifest-key') || '',
 		)
 

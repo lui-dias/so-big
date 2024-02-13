@@ -201,6 +201,18 @@ export default function () {
 		)
 	}
 
+	const imgs = state.value.images?.filter((i) => i.type === 'img')
+	const pictures = state.value.images?.filter((i) => i.type === 'picture')
+
+	const lazyImgs = imgs?.filter((i) => i.lazy)
+	const lazyPictures = pictures?.filter((i) => i.lazy)
+
+	const preloadImgs = imgs?.filter((i) => i.preload)
+	const preloadPictures = pictures?.filter((i) => i.preload)
+
+	const fetchPriorityHighImgs = imgs?.filter((i) => i.fetchPriorityHigh)
+	const fetchPriorityHighPictures = pictures?.filter((i) => i.fetchPriorityHigh)
+
 	return (
 		<>
 			<Form handleSubmit={handleSubmit} />
@@ -285,19 +297,31 @@ Clique na barra pra copiar o json
 						: (
 							<>
 								<div class='flex flex-wrap bg-zinc-800 border border-zinc-700 rounded divide-x divide-zinc-100/20 w-fit'>
-									<div class='flex items-center gap-2 px-3 py-2'>
+									<div
+										class='flex items-center gap-2 px-3 py-2'
+										aria-label={`${imgs.length} Images and ${pictures.length} Pictures`}
+										data-balloon-pos='up'
+									>
 										<Icon.Image width={32} height={32} class='text-zinc-400' />
 										<span class='text-sm text-zinc-400'>
 											{state.value.images.length} Images
 										</span>
 									</div>
-									<div class='flex items-center gap-2 px-3 py-2'>
+									<div
+										class='flex items-center gap-2 px-3 py-2'
+										aria-label={`${lazyImgs.length} Images and ${lazyPictures.length} Pictures`}
+										data-balloon-pos='up'
+									>
 										<Icon.Sleep width={32} height={32} class='text-zinc-400' />
 										<span class='text-sm text-zinc-400'>
 											{state.value.images.filter((i) => i.lazy).length} Lazy
 										</span>
 									</div>
-									<div class='flex items-center gap-2 px-3 py-2'>
+									<div
+										class='flex items-center gap-2 px-3 py-2'
+										aria-label={`${preloadImgs.length} Images and ${preloadPictures.length} Pictures`}
+										data-balloon-pos='up'
+									>
 										<Icon.Clock width={32} height={32} class='text-zinc-400' />
 										<span class='text-sm text-zinc-400'>
 											{state.value.images.filter((i) =>
@@ -305,7 +329,11 @@ Clique na barra pra copiar o json
 											).length} Preload
 										</span>
 									</div>
-									<div class='flex items-center gap-2 px-3 py-2'>
+									<div
+										class='flex items-center gap-0.5 pl-1 pr-3 py-2'
+										aria-label={`${fetchPriorityHighImgs.length} Images and ${fetchPriorityHighPictures.length} Pictures`}
+										data-balloon-pos='up'
+									>
 										<Icon.HighPriority
 											width={32}
 											height={32}

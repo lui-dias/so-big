@@ -2,7 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --balloon-border-radius: 2px;
+    --balloon-color: rgb(38 38 38);
+    --balloon-text-color: rgb(148 163 184);
+    --balloon-font-size: 14px;
+    --balloon-move: 4px;
+    --balloon-padding: 1em 1em;
+}
+
+
 body {
     display: flex;
     flex-direction: column;
+    background: hsl(120, 3%, 6%);
 }

@@ -19,18 +19,15 @@ export type State = {
 		name: string
 		stateSize: number
 	}[]
-	imagesPreloads: {
-		id: string
-		src: string
-		width: number
-		height: number
-	}[]
-	imagesLazy: {
+	images: {
 		id: string
 		src: string
 		width: number
 		height: number
 		lazy: boolean
+		preload: boolean
+		type: 'picture' | 'img'
+		fetchPriorityHigh: boolean
 	}[]
 	error?: 'NO_FRESH' | 'FETCH_ERROR'
 }
@@ -83,24 +80,30 @@ function Row(
 	const collapsable = useCollapsable()
 
 	return (
-		<collapsable.Collapsable class='flex flex-col gap-1 [&:has(>input:checked)>div>label>svg]:rotate-90'>
+		<collapsable.Collapsable class='flex flex-col [&:has(>input:checked)>div>label>svg]:rotate-90 mt-1'>
 			<div class='flex items-center'>
 				<collapsable.Trigger class='h-full flex justify-center items-center'>
 					{children.length > 0 && (
-						<ChevronRight width={24} height={24} class='transition-transform' />
+						<ChevronRight
+							width={24}
+							height={24}
+							class='transition-transform text-slate-500'
+						/>
 					)}
 					<span
-						class={`bg-slate-800 py-1 px-2 min-w-[96px] flex justify-center items-center text-white ${
+						class={`bg-neutral-800 px-2 min-w-[96px] h-10 flex justify-center items-center text-slate-400 ${
 							children.length > 0 ? '' : 'ml-6'
 						}`}
 					>
 						{formatSize(size)}
 					</span>
 				</collapsable.Trigger>
-				<div class='flex items-center w-full'>
+				<div class='flex items-center w-full h-10'>
 					<button
 						type='button'
-						class={`h-10 rounded mx-1 ${size > 5000 ? 'bg-red-500' : 'bg-green-600'}`}
+						class={`rounded-tr-sm h-10 rounded-br-sm mx-1 ${
+							size > 5000 ? 'bg-red-700' : 'bg-green-700'
+						}`}
 						style={{ width: `${percentage * 100}%` }}
 						aria-label={path}
 						data-balloon-pos='right'
@@ -108,13 +111,13 @@ function Row(
 						onClick={() => navigator.clipboard.writeText(data)}
 					/>
 
-					<span class='font-bold block mr-2'>{name}</span>
-					<span class='text-gray-400'>{(percentage * 100).toFixed(2)}%</span>
+					<span class='font-bold block mr-2 text-slate-400'>{name}</span>
+					<span class='text-slate-600'>{(percentage * 100).toFixed(2)}%</span>
 				</div>
 			</div>
 			{children.length > 0 && (
 				<collapsable.ContentWrapper>
-					<collapsable.Content class='flex flex-col gap-1 ml-4'>
+					<collapsable.Content class='flex flex-col ml-4'>
 						{children.map((i) => {
 							const name = /\d+/.test(i.name) ? i.name : `"${i.name}"`
 
@@ -144,20 +147,28 @@ function Form(
 				await handleSubmit(url.value)
 				loading.value = false
 			}}
-			class='max-w-5xl mx-auto w-full mt-36 rounded border-2 border-slate-600 flex'
+			class='max-w-5xl mx-auto w-full mt-36 rounded transition-all ring-1 bg-neutral-800 ring-zinc-100/20 focus-within:ring-2 focus-within:ring-green-700 flex'
 		>
 			<input
 				type='url'
 				name='url'
 				required
-				class='w-full px-3 py-2 outline-0'
+				class='w-full px-3 py-2 focus:outline-0 bg-transparent text-slate-400 placeholder:text-slate-400/50'
 				placeholder='https://storefront.deco.site'
 				autofocus
 			/>
-			<button type='submit' class='h-11 w-20 flex justify-center items-center'>
+			<button
+				type='submit'
+				class='h-11 w-20 flex justify-center items-center text-slate-400'
+			>
 				{loading.value
 					? <Icon.Loading width={32} height={32} class='animate-spin' />
-					: <Icon.Weight width={32} height={32} />}
+					: (
+						<Icon.Weight
+							width={32}
+							height={32}
+						/>
+					)}
 			</button>
 		</form>
 	)
@@ -166,8 +177,7 @@ function Form(
 export default function () {
 	const state = useSignal({} as State)
 
-	const preloadCollapsable = useCollapsable()
-	const lazyCollapsable = useCollapsable()
+	const imagesCollapsable = useCollapsable()
 
 	async function handleSubmit(url: string) {
 		state.value = await fetch(`/api/frsh-state?url=${encodeURIComponent(url)}`)
@@ -198,8 +208,10 @@ export default function () {
 				<div class='w-full mx-auto mt-12 max-w-5xl flex flex-col gap-20'>
 					<div>
 						<strong class='text-4xl block mb-10'>
-							<span class='text-gray-500'>TOTAL:</span>{' '}
-							<span class='font-bold'>{formatSize(state.value.FRSH_STATE_SIZE)}</span>
+							<span class='text-gray-500 text-xl'>TOTAL:</span>{' '}
+							<span class='font-bold text-slate-200'>
+								{formatSize(state.value.FRSH_STATE_SIZE)}
+							</span>
 						</strong>
 
 						<div class='flex items-center gap-4 mb-4'>
@@ -216,10 +228,12 @@ Clique na barra pra copiar o json
 								<Icon.QuestionMark
 									width={32}
 									height={32}
+									class='text-slate-400'
 								/>
 							</span>
 							<button
 								type='button'
+								title='Recolher todos os itens'
 								// deno-lint-ignore fresh-server-event-handlers
 								onClick={(e) => {
 									for (
@@ -232,10 +246,11 @@ Clique na barra pra copiar o json
 									}
 								}}
 							>
-								<Icon.Collapse width={32} height={32} />
+								<Icon.Collapse width={32} height={32} class='text-slate-400' />
 							</button>
 							<button
 								type='button'
+								title='Expandir todos os itens'
 								// deno-lint-ignore fresh-server-event-handlers
 								onClick={(e) => {
 									for (
@@ -248,11 +263,11 @@ Clique na barra pra copiar o json
 									}
 								}}
 							>
-								<Icon.Expand width={32} height={32} />
+								<Icon.Expand width={32} height={32} class='text-slate-400' />
 							</button>
 						</div>
 
-						<ul class='flex flex-col gap-1'>
+						<ul>
 							{indexJson(
 								JSON.parse(state.value.FRSH_STATE).v[0],
 								state.value.FRSH_STATE_SIZE,
@@ -261,118 +276,93 @@ Clique na barra pra copiar o json
 						</ul>
 					</div>
 
-					{state.value.imagesPreloads.length === 0
-						? (
-							<span class='text-red-500 text-lg'>
-								Nenhuma imagem tem preload
-							</span>
-						)
-						: (
-							<preloadCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
-								<preloadCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
-									<ChevronRight
-										width={32}
-										height={32}
-										class='transition-transform'
-									/>
-									<span>
-										Preload:{' '}
-										<span class='font-bold'>
-											{state.value.imagesPreloads.length}
-										</span>
-									</span>
-								</preloadCollapsable.Trigger>
-								<preloadCollapsable.ContentWrapper>
-									<preloadCollapsable.Content class='flex flex-wrap bg-gray-100'>
-										{state.value.imagesPreloads.map((i) => {
-											const isSmall = i.width < Math.min(innerWidth, 1024)
-
-											return (
-												<>
-													{i.width > 0 && i.height > 0 && (
-														<a
-															key={i.id}
-															class='text-blue-500 hover:text-blue-700 relative h-[200px] p-1 flex-grow flex justify-center items-center group border-y-2 first:border-t-0 last:border-b-0 border-y-gray-200'
-															href={i.src}
-															target='_blank'
-															rel='noopener noreferrer'
-														>
-															<img
-																src={i.src}
-																alt=''
-																class={`object-cover rounded max-h-full ${
-																	isSmall ? '' : 'min-w-full'
-																}`}
-															/>
-
-															<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
-																Preload - {i.width}x{i.height}
-															</span>
-														</a>
-													)}
-												</>
-											)
-										})}
-									</preloadCollapsable.Content>
-								</preloadCollapsable.ContentWrapper>
-							</preloadCollapsable.Collapsable>
-						)}
-
-					{state.value.imagesLazy.length === 0
+					{state.value.images.length === 0
 						? (
 							<span class='text-red-500 text-lg'>
 								Nenhuma imagem é lazy
 							</span>
 						)
 						: (
-							<lazyCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
-								<lazyCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
-									<ChevronRight
-										width={32}
-										height={32}
-										class='transition-transform'
-									/>
-									<span>
-										Lazy:{' '}
-										<span class='font-bold'>
-											{state.value.imagesLazy.length}
+							<>
+								<div class='flex flex-wrap bg-zinc-800 border border-zinc-700 rounded divide-x divide-zinc-100/20 w-fit'>
+									<div class='flex items-center gap-2 px-3 py-2'>
+										<Icon.Image width={32} height={32} class='text-zinc-400' />
+										<span class='text-sm text-zinc-400'>
+											{state.value.images.length} Images
 										</span>
-									</span>
-								</lazyCollapsable.Trigger>
-								<lazyCollapsable.ContentWrapper>
-									<lazyCollapsable.Content class='flex flex-wrap bg-gray-100'>
-										{state.value.imagesLazy.map((i) => {
-											const isSmall = i.width < Math.min(innerWidth, 1024)
+									</div>
+									<div class='flex items-center gap-2 px-3 py-2'>
+										<Icon.Sleep width={32} height={32} class='text-zinc-400' />
+										<span class='text-sm text-zinc-400'>
+											{state.value.images.filter((i) => i.lazy).length} Lazy
+										</span>
+									</div>
+									<div class='flex items-center gap-2 px-3 py-2'>
+										<Icon.Clock width={32} height={32} class='text-zinc-400' />
+										<span class='text-sm text-zinc-400'>
+											{state.value.images.filter((i) =>
+												i.preload
+											).length} Preload
+										</span>
+									</div>
+									<div class='flex items-center gap-2 px-3 py-2'>
+										<Icon.HighPriority
+											width={32}
+											height={32}
+											class='text-zinc-400'
+										/>
+										<span class='text-sm text-zinc-400'>
+											{state.value.images.filter((i) => i.fetchPriorityHigh)
+												.length} Fetch Priority High
+										</span>
+									</div>
+								</div>
+								<imagesCollapsable.Collapsable class='[&:has(>input:checked)>label>svg]:rotate-90'>
+									<imagesCollapsable.Trigger class='text-4xl mb-4 flex items-center gap-1'>
+										<ChevronRight
+											width={32}
+											height={32}
+											class='transition-transform text-slate-500'
+										/>
+										<span class='text-slate-400'>
+											Images
+										</span>
+									</imagesCollapsable.Trigger>
+									<imagesCollapsable.ContentWrapper>
+										<imagesCollapsable.Content class='flex flex-wrap bg-neutral-800'>
+											{state.value.images.map((i) => {
+												const isSmall = i.width < Math.min(innerWidth, 1024)
 
-											return (
-												<>
-													{i.width > 0 && i.height > 0 && (
-														<a
-															key={i.id}
-															class='text-blue-500 hover:text-blue-700 relative h-[200px] p-1 flex-grow flex justify-center items-center group border-y-2 first:border-t-0 last:border-b-0 border-y-gray-200'
-															href={i.src}
-															target='_blank'
-															rel='noopener noreferrer'
-														>
-															<img
-																src={i.src}
-																alt=''
-																class={`object-cover rounded max-h-full ${
-																	isSmall ? '' : 'min-w-full'
-																}`}
-															/>
+												return (
+													<>
+														{i.width > 0 && i.height > 0 && (
+															<a
+																key={i.id}
+																class='text-blue-500 hover:text-blue-700 relative h-[200px] p-1 flex-grow flex justify-center items-center group border-y first:border-t-0 last:border-b-0 border-y-neutral-700'
+																href={i.src}
+																target='_blank'
+																rel='noopener noreferrer'
+															>
+																<img
+																	src={i.src}
+																	alt=''
+																	class={`object-cover rounded max-h-full ${
+																		isSmall ? '' : 'min-w-full'
+																	}`}
+																/>
 
-															<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
-																Lazy - {i.width}x{i.height}
-															</span>
-														</a>
-													)}
-												</>
-											)
-										})}
-									</lazyCollapsable.Content>
-								</lazyCollapsable.ContentWrapper>
-							</lazyCollapsable.Collapsable>
+																<span class='absolute px-2 py-1 bg-black rounded-tl text-white font-medium opacity-0 transition-opacity group-hover:opacity-100 bottom-0 right-0'>
+																	{i.width}x{i.height}
+																</span>
+															</a>
+														)}
+													</>
+												)
+											})}
+										</imagesCollapsable.Content>
+									</imagesCollapsable.ContentWrapper>
+								</imagesCollapsable.Collapsable>
+							</>
 						)}
 
 					<div class='w-full h-10' />

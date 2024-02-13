@@ -44,46 +44,49 @@ export const handler: Handlers<State> = {
 
 		state.FRSH_STATE_SIZE = JSON.stringify(state.FRSH_STATE).length
 
-		state.imagesPreloads = await Promise.all([
+		const imagesPreloads = [
 			...dom.querySelectorAll(
 				'link[rel=preload][as=image]',
 			) as unknown as Element[],
-		].map(async (el) => {
-			const src = el.getAttribute('href') || ''
+		].map((el) => {
+			let src = el.getAttribute('href') || ''
 
-			const hasOrigin = !src.startsWith('/')
-			const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
+			if (src.includes('image.ts')) {
+				const normalUrl = new URL(`http://localhost:8000${src}`).searchParams.get('src')
 
-			const im = await imageDimensionsFromStream(
-				r.body as ReadableStream<Uint8Array>,
-			)
+				if (!normalUrl) throw new Error('no normal url')
 
-			if (!im) {
-				return {
-					id: nanoid(),
-					src: hasOrigin ? src : url.replace(/\/$/, '') + src,
-					width: 0,
-					height: 0,
-				}
+				src = normalUrl
 			}
 
-			const { width, height } = im
+			const fetchPriorityHigh = el.getAttribute('fetchpriority') === 'high'
 
-			return {
-				id: nanoid(),
-				src: hasOrigin ? src : url.replace(/\/$/, '') + src,
-				width,
-				height,
-			}
-		}))
+			return { src, fetchPriorityHigh }
+		})
 
-		state.imagesLazy = await Promise.all([
+		state.images = await Promise.all([
 			...dom.querySelectorAll(
 				'img',
 			) as unknown as Element[],
+			...dom.querySelectorAll(
+				'picture > source',
+			) as unknown as Element[],
 		].map(async (el) => {
 			const lazy = el.getAttribute('loading') === 'lazy'
-			const src = el.getAttribute('src') || ''
+			let src = el.getAttribute('src') || el.getAttribute('srcset')?.split(' ').at(-2) || ''
+
+			if (src.includes('image.ts')) {
+				const normalUrl = new URL(`http://localhost:8000${src}`).searchParams.get('src')
+
+				if (!normalUrl) throw new Error('no normal url')
+
+				src = normalUrl
+			}
+
+			const preload = imagesPreloads.some((i) => i.src === src)
+			const fetchPriorityHigh = imagesPreloads.some((i) =>
+				i.src === src && i.fetchPriorityHigh
+			)
 
 			const hasOrigin = !src.startsWith('/')
 			const r = await fetch(hasOrigin ? src : url.replace(/\/$/, '') + src)
@@ -92,17 +95,10 @@ export const handler: Handlers<State> = {
 				r.body as ReadableStream<Uint8Array>,
 			)
 
-			if (!im) {
-				return {
-					id: nanoid(),
-					src: hasOrigin ? src : url.replace(/\/$/, '') + src,
-					width: 0,
-					height: 0,
-					lazy,
-				}
+			const { width, height } = im ?? {
+				width: 0,
+				height: 0,
 			}
-
-			const { width, height } = im
 
 			return {
 				id: nanoid(),
@@ -110,6 +106,9 @@ export const handler: Handlers<State> = {
 				width,
 				height,
 				lazy,
+				type: el.tagName === 'SOURCE' ? 'picture' : 'img',
+				preload,
+				fetchPriorityHigh,
 			}
 		}))
 
